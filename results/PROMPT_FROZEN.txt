@@ -1,0 +1,55 @@
+d084fcc8ed61f7df36879d82bc80093c287fb722b20b64074be772306d9f8f8a
+02b3eabde6795217d844c468d9fc13ab381d7d0fc156b269aad4af6d40fae755
+
+Line 1: sha256 of the prompt text, templates and answer parsers. Line 2: sha256 of the name list, label list, program generator and form check.
+Frozen 2026-10-23, generator refrozen after the equal fact count fix and the pilot v2 rerun.
+
+You apply a company's written rules to customer records. Use only the rules and facts given. A customer has a status only if the rules give it from the facts. The words in the rules are invented labels, so their everyday meaning does not matter. If the status cannot be shown from the rules and facts, the answer is no.
+--
+ Never show your work. Your entire reply must be exactly one word.
+--
+You translate a company's written rules and facts into Prolog. The words in the rules are invented labels. Do not judge or answer anything. Only translate.
+--
+('A customer is {x} if the customer is {a} and {b}.', 'Any customer who is {a} and also {b} is classed as {x}.', 'The status {x} is granted when a customer is both {a} and {b}.', 'If a customer is {a} and {b}, then the customer is {x}.')
+--
+def user_direct(prog: Program, question: str, mode: str, rules: bool = True) -> str:
+    """Modes. A: may reason briefly, ends with Answer: yes or no. A0: answer only. C: like A, may end with Answer: HAND OFF."""
+    block = (f"Rules:\n{rules_text(prog)}\n\n" if rules else "Rules: the rules are not shown.\n\n") + f"Facts:\n{facts_text(prog)}\n\n"
+    tail = {"A": "Work through the rules briefly, then end with a last line that reads Answer: yes or Answer: no.",
+            "A0": "Reply with the single word yes or no and nothing else.",
+            "C": ("Work through the rules briefly, then end with a last line that reads Answer: yes, Answer: no, or Answer: HAND OFF. "
+                  "Use HAND OFF only if you do not trust yourself to apply these rules correctly here.")}[mode]
+    return f"{block}Question: {question}\n{tail}"
+
+--
+def user_translate(prog: Program) -> str:
+    return (f"Rules:\n{rules_text(prog)}\n\nFacts:\n{facts_text(prog)}\n\n"
+            "Translate every rule and every fact into Prolog. Use each label exactly as written, in lower case, as a predicate "
+            "name with one argument, and use each customer name in lower case as the argument. A fact looks like label(name). "
+            "A rule looks like head(X) :- first(X), second(X). Put every clause on its own line and end each with a period. "
+            "Reply with only the Prolog code in one code block. Do not add questions, comments, or anything else.")
+
+--
+def system_for(mode: str) -> str:
+    return SYSTEM_BASE + (SYSTEM_ONLY_EXTRA if mode == "A0" else "")
+
+--
+def parse_answer(text: str, mode: str):
+    t = (text or "").strip().lower()
+    if mode == "A0":
+        m = re.match(r"\W*(yes|no)\b", t)
+        return m.group(1) if m else None
+    m = re.findall(r"answer:\s*(yes|no|hand off)\b", t)
+    if not m:
+        return None
+    return "hand" if m[-1] == "hand off" else m[-1]
+
+--
+def extract_code(text: str) -> str:
+    """Code between the first pair of fences. A reply that opens a fence and never closes it is read to its end."""
+    text = text or ""
+    m = re.search(r"```[a-zA-Z]*\s*\n(.*?)```", text, re.S)
+    if m:
+        return m.group(1)
+    m = re.search(r"```[a-zA-Z]*\s*\n(.*)$", text, re.S)
+    return m.group(1) if m else text

@@ -1,0 +1,15 @@
+results/full/
+results/pilot_v1/
+results/pilot_v2/
+results/pilot_v2a_old_generator/
+results/full_haiku.log
+results/ledger.json
+figures/
+tds_upload/
+draft.md
+numbers.json
+PLAN*.md
+*.docx
+__pycache__/
+*.pyc
+local-secrets/
